@@ -5,8 +5,9 @@ import { v2 as cloudinary } from "cloudinary"
 import { CloudinaryStorage } from "multer-storage-cloudinary"
 import { pipeline } from "stream"
 import { createGzip } from "zlib"
+import { Transform } from "@json2csv/node"
 import { getBooks, getBooksJSONReadableStream, saveUsersAvatars } from "../../lib/fs-tools.js"
-import { getPDFReadableStream } from "../../lib/pdf-tools.js"
+import { asyncPDFGeneration, getPDFReadableStream } from "../../lib/pdf-tools.js"
 
 const filesRouter = Express.Router()
 
@@ -77,6 +78,48 @@ filesRouter.get("/pdf", async (req, res, next) => {
     pipeline(source, destination, err => {
       if (err) console.log(err)
     })
+  } catch (error) {
+    next(error)
+  }
+})
+
+filesRouter.get("/csv", (req, res, next) => {
+  try {
+    res.setHeader("Content-Disposition", "attachment; filename=books.csv")
+    const source = getBooksJSONReadableStream()
+    const transform = new Transform({ fields: ["asin", "title", "category"] })
+    const destination = res
+    pipeline(source, transform, destination, err => {
+      if (err) console.log(err)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+filesRouter.get("/asyncPDF", async (req, res, next) => {
+  try {
+    // const books = await getBooks()
+    // const source = getPDFReadableStream(books[0])
+    // const destination = res
+
+    // pipeline(source, destination, err => {
+    //   if (err) console.log(err)
+    // })
+
+    // await sendPDFViaEmail(pdf) <-- you cannot do this because you can't be sure that the pdf generation happened successfully on this line, email will probably contain a corrupted PDF
+    // a solution could be to put the await sendPDFViaEmail(pdf) into the pipeline callback but it's not a good idea to mix callbacks & promises
+
+    /*
+    1. generate the pdf by using the stream approach
+    2. Wait for it to be completed
+    3. Use the generated file somehow (like sendPDFViaEmail(pdf))
+    
+    */
+    const books = await getBooks()
+    await asyncPDFGeneration(books[1])
+    // await sendPDFViaEmail()
+    res.send({ message: "PDF GENERATED CORRECTLY" })
   } catch (error) {
     next(error)
   }
