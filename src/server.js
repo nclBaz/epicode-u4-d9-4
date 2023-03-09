@@ -8,10 +8,13 @@ import booksRouter from "./api/books/index.js"
 import filesRouter from "./api/files/index.js"
 import { genericErrorHandler, badRequestHandler, unauthorizedHandler, notfoundHandler } from "./errorsHandlers.js"
 import createHttpError from "http-errors"
+import swaggerUi from "swagger-ui-express"
+import yaml from "yamljs"
 
 const server = Express()
 const port = process.env.PORT || 3001
 const publicFolderPath = join(process.cwd(), "./public")
+const yamlFile = yaml.load(join(process.cwd(), "./src/docs/apiDocs.yml"))
 
 console.log(process.env.MONGO_URL)
 console.log(process.env.SECRET)
@@ -54,6 +57,7 @@ server.use(Express.json()) // If you don't add this line BEFORE the endpoints al
 server.use("/users", usersRouter)
 server.use("/books", booksRouter)
 server.use("/files", filesRouter)
+server.use("/docs", swaggerUi.serve, swaggerUi.setup(yamlFile))
 
 // ************************* ERROR HANDLERS *******************
 server.use(badRequestHandler) // 400
